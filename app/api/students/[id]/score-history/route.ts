@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { query } from '@/lib/db'
+import { query, isUsingDemoMode } from '@/lib/db'
+import { scoreHistory as mockScoreHistory } from '@/lib/mock-data'
 
 interface DbScoreHistory {
   id: string
@@ -30,6 +31,13 @@ export async function GET(
 
     return NextResponse.json(history)
   } catch (error) {
+    // В демо-режиме возвращаем моковые данные
+    if ((error as Error).message === 'DEMO_MODE' || isUsingDemoMode()) {
+      const { id } = await params
+      const history = mockScoreHistory[id] || []
+      return NextResponse.json(history)
+    }
+    
     console.error('Get score history error:', error)
     return NextResponse.json(
       { error: 'Ошибка при получении истории баллов' },

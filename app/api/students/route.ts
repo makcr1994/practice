@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
-import { query } from '@/lib/db'
+import { query, isUsingDemoMode } from '@/lib/db'
 import { getCurrentUser, getUserById, formatUserName } from '@/lib/auth'
 import type { Student } from '@/lib/types'
+import { students as mockStudents } from '@/lib/mock-data'
 
 interface DbStudent {
   id: string
@@ -73,6 +74,20 @@ export async function GET(request: Request) {
 
     return NextResponse.json(students)
   } catch (error) {
+    // В демо-режиме возвращаем моковые данные
+    if ((error as Error).message === 'DEMO_MODE' || isUsingDemoMode()) {
+      let filteredStudents = [...mockStudents]
+      
+      if (status) {
+        filteredStudents = filteredStudents.filter(s => s.status === status)
+      }
+      if (supervisorId) {
+        filteredStudents = filteredStudents.filter(s => s.supervisorId === supervisorId)
+      }
+      
+      return NextResponse.json(filteredStudents)
+    }
+    
     console.error('Get students error:', error)
     return NextResponse.json(
       { error: 'Ошибка при получении списка студентов' },

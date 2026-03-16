@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
-import { query } from '@/lib/db'
+import { query, isUsingDemoMode } from '@/lib/db'
 import type { ActivityRecord } from '@/lib/types'
+import { activityRecords as mockActivities } from '@/lib/mock-data'
 
 interface DbActivity {
   id: string
@@ -45,6 +46,15 @@ export async function GET(
 
     return NextResponse.json(activities)
   } catch (error) {
+    // В демо-режиме возвращаем моковые данные
+    if ((error as Error).message === 'DEMO_MODE' || isUsingDemoMode()) {
+      const { id } = await params
+      const activities = mockActivities
+        .filter(a => a.studentId === id)
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      return NextResponse.json(activities)
+    }
+    
     console.error('Get activities error:', error)
     return NextResponse.json(
       { error: 'Ошибка при получении активности' },

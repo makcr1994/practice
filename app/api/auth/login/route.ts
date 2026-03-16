@@ -1,6 +1,15 @@
 import { NextResponse } from 'next/server'
 import { getUserByEmail, verifyPassword, createToken, createSession, formatUserName } from '@/lib/auth'
+import { isUsingDemoMode } from '@/lib/db'
 import { cookies } from 'next/headers'
+
+// Демо-пользователь для режима без БД
+const demoUser = {
+  id: 'demo-user',
+  email: 'demo@example.com',
+  name: 'Демо Пользователь',
+  role: 'supervisor' as const
+}
 
 export async function POST(request: Request) {
   try {
@@ -11,6 +20,23 @@ export async function POST(request: Request) {
         { error: 'Email и пароль обязательны' },
         { status: 400 }
       )
+    }
+
+    // В демо-режиме принимаем любые данные
+    if (isUsingDemoMode()) {
+      const cookieStore = await cookies()
+      cookieStore.set('auth-token', 'demo-token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60,
+        path: '/'
+      })
+
+      return NextResponse.json({
+        user: { ...demoUser, email },
+        message: 'Демо-режим: вход выполнен успешно'
+      })
     }
 
     // Получаем пользователя
@@ -58,6 +84,24 @@ export async function POST(request: Request) {
       message: 'Вход выполнен успешно'
     })
   } catch (error) {
+    // В случае ошибки БД переключаемся на демо-режим
+    if ((error as Error).message === 'DEMO_MODE') {
+      const { email } = await request.json().catch(() => ({ email: 'demo@example.com' }))
+      const cookieStore = await cookies()
+      cookieStore.set('auth-token', 'demo-token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60,
+        path: '/'
+      })
+
+      return NextResponse.json({
+        user: { ...demoUser, email },
+        message: 'Демо-режим: вход выполнен успешно'
+      })
+    }
+    
     console.error('Login error:', error)
     return NextResponse.json(
       { error: 'Ошибка сервера' },

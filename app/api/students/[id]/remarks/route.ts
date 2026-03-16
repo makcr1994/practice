@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
-import { query, queryOne } from '@/lib/db'
+import { query, queryOne, isUsingDemoMode } from '@/lib/db'
 import { getCurrentUser, getUserById, formatUserName } from '@/lib/auth'
 import type { ActivityRecord } from '@/lib/types'
+import { activityRecords as mockActivities } from '@/lib/mock-data'
 
 interface DbRemark {
   id: string
@@ -41,6 +42,15 @@ export async function GET(
 
     return NextResponse.json(rows.map(mapRemark))
   } catch (error) {
+    // В демо-режиме возвращаем моковые данные
+    if ((error as Error).message === 'DEMO_MODE' || isUsingDemoMode()) {
+      const { id } = await params
+      const remarks = mockActivities
+        .filter(a => a.studentId === id && a.type === 'remark')
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      return NextResponse.json(remarks)
+    }
+    
     console.error('Get remarks error:', error)
     return NextResponse.json(
       { error: 'Ошибка при получении замечаний' },

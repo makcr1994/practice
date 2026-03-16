@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
-import { query, queryOne } from '@/lib/db'
+import { query, queryOne, isUsingDemoMode } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 import type { Student } from '@/lib/types'
+import { students as mockStudents } from '@/lib/mock-data'
 
 interface DbStudent {
   id: string
@@ -67,6 +68,21 @@ export async function GET(
 
     return NextResponse.json(mapStudent(row))
   } catch (error) {
+    // В демо-режиме возвращаем моковые данные
+    if ((error as Error).message === 'DEMO_MODE' || isUsingDemoMode()) {
+      const { id } = await params
+      const student = mockStudents.find(s => s.id === id)
+      
+      if (!student) {
+        return NextResponse.json(
+          { error: 'Студент не найден' },
+          { status: 404 }
+        )
+      }
+      
+      return NextResponse.json(student)
+    }
+    
     console.error('Get student error:', error)
     return NextResponse.json(
       { error: 'Ошибка при получении данных студента' },
