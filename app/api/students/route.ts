@@ -39,11 +39,25 @@ function mapStudent(row: DbStudent, supervisorName: string): Student {
 
 // GET - получить всех студентов
 export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const status = searchParams.get('status')
-    const supervisorId = searchParams.get('supervisorId')
+  const { searchParams } = new URL(request.url)
+  const status = searchParams.get('status')
+  const supervisorId = searchParams.get('supervisorId')
 
+  // В демо-режиме сразу возвращаем моковые данные
+  if (isUsingDemoMode()) {
+    let filteredStudents = [...mockStudents]
+    
+    if (status) {
+      filteredStudents = filteredStudents.filter(s => s.status === status)
+    }
+    if (supervisorId) {
+      filteredStudents = filteredStudents.filter(s => s.supervisorId === supervisorId)
+    }
+    
+    return NextResponse.json(filteredStudents)
+  }
+
+  try {
     let sql = `
       SELECT s.*, u.first_name as sup_first_name, u.last_name as sup_last_name, u.middle_name as sup_middle_name
       FROM students s
@@ -74,8 +88,8 @@ export async function GET(request: Request) {
 
     return NextResponse.json(students)
   } catch (error) {
-    // В демо-режиме возвращаем моковые данные
-    if ((error as Error).message === 'DEMO_MODE' || isUsingDemoMode()) {
+    // В случае ошибки БД возвращаем моковые данные
+    if ((error as Error).message === 'DEMO_MODE') {
       let filteredStudents = [...mockStudents]
       
       if (status) {
