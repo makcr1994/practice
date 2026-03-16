@@ -9,7 +9,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { useToast } from '@/hooks/use-toast'
-import { supervisors } from '@/lib/mock-data'
+import { createStudent } from '@/lib/api'
+import { useAuth } from '@/lib/auth-context'
 import {
   Select,
   SelectContent,
@@ -29,8 +30,8 @@ import {
 export default function AddStudentPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const { user } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
-  const [isActive, setIsActive] = useState(true)
   const [formData, setFormData] = useState({
     lastName: '',
     firstName: '',
@@ -38,8 +39,7 @@ export default function AddStudentPage() {
     group: '',
     direction: '',
     practiceStart: '',
-    practiceEnd: '',
-    supervisorId: ''
+    practiceEnd: ''
   })
 
   const handleChange = (field: string, value: string) => {
@@ -48,18 +48,44 @@ export default function AddStudentPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (!user) {
+      toast({
+        title: 'Ошибка',
+        description: 'Необходимо войти в систему',
+        variant: 'destructive',
+      })
+      return
+    }
+
     setIsLoading(true)
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    try {
+      await createStudent({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        middleName: formData.middleName,
+        group: formData.group,
+        direction: formData.direction,
+        practiceStart: formData.practiceStart,
+        practiceEnd: formData.practiceEnd
+      })
 
-    toast({
-      title: 'Студент добавлен',
-      description: `${formData.lastName} ${formData.firstName} успешно добавлен в систему`,
-    })
+      toast({
+        title: 'Студент добавлен',
+        description: `${formData.lastName} ${formData.firstName} успешно добавлен в систему`,
+      })
 
-    setIsLoading(false)
-    router.push('/dashboard/students')
+      router.push('/dashboard/students')
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: error instanceof Error ? error.message : 'Не удалось добавить студента',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -179,42 +205,16 @@ export default function AddStudentPage() {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <User className="h-5 w-5" />
-              Руководитель и статус
+              Руководитель практики
             </CardTitle>
-            <CardDescription>Назначьте руководителя практики</CardDescription>
+            <CardDescription>Информация о назначенном руководителе</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="supervisor">Руководитель практики *</Label>
-              <Select 
-                value={formData.supervisorId} 
-                onValueChange={(value) => handleChange('supervisorId', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Выберите руководителя" />
-                </SelectTrigger>
-                <SelectContent>
-                  {supervisors.map(sup => (
-                    <SelectItem key={sup.id} value={sup.id}>
-                      {sup.lastName} {sup.firstName} {sup.middleName} ({sup.position})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center justify-between p-4 rounded-lg bg-secondary">
-              <div>
-                <Label htmlFor="active" className="font-medium">Статус активности</Label>
-                <p className="text-sm text-muted-foreground">
-                  {isActive ? 'Студент активен и проходит практику' : 'Студент неактивен'}
-                </p>
-              </div>
-              <Switch
-                id="active"
-                checked={isActive}
-                onCheckedChange={setIsActive}
-              />
+          <CardContent>
+            <div className="p-4 rounded-lg bg-secondary">
+              <p className="font-medium">Руководитель: {user?.name || 'Не определён'}</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Студент будет автоматически прикреплён к текущему авторизованному руководителю
+              </p>
             </div>
           </CardContent>
         </Card>

@@ -13,11 +13,7 @@ import { ScoreMeter } from '@/components/score-meter'
 import { ActivityItem } from '@/components/activity-item'
 import { AchievementForm } from '@/components/achievement-form'
 import { RemarkForm } from '@/components/remark-form'
-import { 
-  getStudentById, 
-  getStudentActivities, 
-  getStudentDailyActivities 
-} from '@/lib/mock-data'
+import { useStudent, useStudentActivities } from '@/lib/api'
 import { 
   ArrowLeft, 
   Calendar, 
@@ -31,7 +27,8 @@ import {
   Activity,
   Award,
   AlertCircle,
-  ChevronRight
+  ChevronRight,
+  Loader2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -41,9 +38,22 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
   const [searchQuery, setSearchQuery] = useState('')
   const [dateFilter, setDateFilter] = useState('')
   
-  const student = getStudentById(id)
-  const activities = getStudentActivities(id)
-  const dailyActivities = getStudentDailyActivities(id)
+  const { data: student, isLoading: studentLoading } = useStudent(id)
+  const { data: activities = [] } = useStudentActivities(id)
+  
+  // Daily activities - for now using empty array, can be extended
+  const dailyActivities: { id: string; date: string; task: string; action: string; comment: string; scoreChange: number }[] = []
+
+  if (studentLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Загрузка данных студента...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!student) {
     return (

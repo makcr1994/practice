@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { StudentCard } from '@/components/student-card'
 import { LoginForm } from '@/components/login-form'
-import { getActiveStudents, students } from '@/lib/mock-data'
+import { useStudents } from '@/lib/api'
+import { Loader2 } from 'lucide-react'
 import { 
   Search, 
   FileText, 
@@ -15,7 +16,8 @@ import {
   GraduationCap, 
   TrendingUp,
   BookOpen,
-  Filter
+  Filter,
+  Loader2 as LoaderIcon
 } from 'lucide-react'
 import {
   Select,
@@ -31,7 +33,9 @@ export default function HomePage() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [groupFilter, setGroupFilter] = useState<string>('all')
   
-  const activeStudents = getActiveStudents()
+  const { data: students = [], isLoading, error } = useStudents()
+  
+  const activeStudents = students.filter(s => s.status === 'active')
   
   // Get unique groups for filter
   const groups = [...new Set(students.map(s => s.group))].sort()
@@ -50,7 +54,7 @@ export default function HomePage() {
   // Statistics
   const totalStudents = students.length
   const completedCount = students.filter(s => s.status === 'completed').length
-  const averageScore = Math.round(students.reduce((acc, s) => acc + s.score, 0) / totalStudents)
+  const averageScore = totalStudents > 0 ? Math.round(students.reduce((acc, s) => acc + s.score, 0) / totalStudents) : 0
 
   return (
     <div className="min-h-screen">

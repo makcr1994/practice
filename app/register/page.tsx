@@ -8,11 +8,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
+import { useAuth } from '@/lib/auth-context'
 import { UserPlus, Mail, Lock, User, Loader2, ArrowLeft, Building } from 'lucide-react'
 
 export default function RegisterPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const { register } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     lastName: '',
@@ -40,18 +42,49 @@ export default function RegisterPage() {
       return
     }
 
+    if (formData.password.length < 6) {
+      toast({
+        title: 'Ошибка',
+        description: 'Пароль должен содержать минимум 6 символов',
+        variant: 'destructive',
+      })
+      return
+    }
+
     setIsLoading(true)
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    try {
+      const result = await register({
+        email: formData.email,
+        password: formData.password,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        middleName: formData.middleName || undefined,
+        position: formData.position || undefined
+      })
 
-    toast({
-      title: 'Регистрация успешна',
-      description: 'Ваша заявка отправлена на рассмотрение администратору',
-    })
-
-    setIsLoading(false)
-    router.push('/')
+      if (result.success) {
+        toast({
+          title: 'Регистрация успешна',
+          description: 'Добро пожаловать в систему!',
+        })
+        router.push('/dashboard')
+      } else {
+        toast({
+          title: 'Ошибка регистрации',
+          description: result.error || 'Не удалось зарегистрироваться',
+          variant: 'destructive',
+        })
+      }
+    } catch {
+      toast({
+        title: 'Ошибка',
+        description: 'Произошла ошибка при регистрации',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (

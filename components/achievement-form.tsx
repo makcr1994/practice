@@ -9,6 +9,8 @@ import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { Award, Loader2, Plus, User } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
+import { addAchievement } from '@/lib/api'
+import { useSWRConfig } from 'swr'
 
 interface AchievementFormProps {
   studentId: string
@@ -17,29 +19,53 @@ interface AchievementFormProps {
 
 export function AchievementForm({ studentId, onSuccess }: AchievementFormProps) {
   const [description, setDescription] = useState('')
-  const [employeeName, setEmployeeName] = useState('')
+  const [scoreChange, setScoreChange] = useState(5)
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
   const { user } = useAuth()
+  const { mutate } = useSWRConfig()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!description.trim()) return
 
+    if (!user) {
+      toast({
+        title: 'Ошибка',
+        description: 'Необходимо войти в систему',
+        variant: 'destructive',
+      })
+      return
+    }
+
     setIsLoading(true)
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500))
+    try {
+      await addAchievement(studentId, { description, scoreChange })
+      
+      toast({
+        title: 'Достижение добавлено',
+        description: `Студенту начислено +${scoreChange} баллов`,
+      })
 
-    toast({
-      title: 'Достижение добавлено',
-      description: 'Запись успешно сохранена в системе',
-    })
+      // Revalidate data
+      mutate(`/api/students/${studentId}`)
+      mutate(`/api/students/${studentId}/achievements`)
+      mutate(`/api/students/${studentId}/activities`)
+      mutate('/api/students')
 
-    setDescription('')
-    setEmployeeName('')
-    setIsLoading(false)
-    onSuccess?.()
+      setDescription('')
+      setScoreChange(5)
+      onSuccess?.()
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: error instanceof Error ? error.message : 'Не удалось добавить достижение',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -69,22 +95,20 @@ export function AchievementForm({ studentId, onSuccess }: AchievementFormProps) 
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`employee-ach-${studentId}`}>ФИО сотрудника</Label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id={`employee-ach-${studentId}`}
-                placeholder={user?.name || 'Введите ФИО сотрудника'}
-                value={employeeName}
-                onChange={(e) => setEmployeeName(e.target.value)}
-                className="pl-10 bg-background"
-              />
-            </div>
-            {user && (
-              <p className="text-xs text-muted-foreground">
-                Оставьте пустым для автозаполнения: {user.name}
-              </p>
-            )}
+            <Label htmlFor={`score-ach-${studentId}`}>Количество баллов</Label>
+            <Input
+              id={`score-ach-${studentId}`}
+              type="number"
+              min={1}
+              max={50}
+              value={scoreChange}
+              onChange={(e) => setScoreChange(parseInt(e.target.value) || 1)}
+              className="bg-background"
+              required
+            />
+            <p className="text-xs text-muted-foreground">
+              Автор записи: {user?.name || 'Не авторизован'}
+            </p>
           </div>
           <Button type="submit" className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700" disabled={isLoading}>
             {isLoading ? (

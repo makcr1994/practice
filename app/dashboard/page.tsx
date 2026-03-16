@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { students, activityRecords } from '@/lib/mock-data'
-import { getScoreColor } from '@/lib/types'
+import { useStudents } from '@/lib/api'
+import { getScoreColor, type ActivityRecord } from '@/lib/types'
 import { 
   Users, 
   UserCheck, 
@@ -20,24 +20,20 @@ import {
 import { cn } from '@/lib/utils'
 
 export default function DashboardPage() {
-  const totalStudents = students.length
-  const activeStudents = students.filter(s => s.status === 'active').length
-  const completedStudents = students.filter(s => s.status === 'completed').length
-  const averageScore = Math.round(students.reduce((acc, s) => acc + s.score, 0) / totalStudents)
+  const { data: students = [], isLoading } = useStudents()
   
-  // Recent activities (last 7 days)
-  const weekAgo = new Date()
-  weekAgo.setDate(weekAgo.getDate() - 7)
-  const recentActivities = activityRecords.filter(a => new Date(a.date) >= weekAgo)
+  const totalStudents = students.length
+  const activeStudentsCount = students.filter(s => s.status === 'active').length
+  const completedStudents = students.filter(s => s.status === 'completed').length
+  const averageScore = totalStudents > 0 ? Math.round(students.reduce((acc, s) => acc + s.score, 0) / totalStudents) : 0
+  
+  // Placeholder for recent activities (will be loaded separately if needed)
+  const recentActivities: ActivityRecord[] = []
+  const latestActivities: ActivityRecord[] = []
 
   // Top students
   const topStudents = [...students]
     .sort((a, b) => b.score - a.score)
-    .slice(0, 5)
-
-  // Recent activities for display
-  const latestActivities = [...activityRecords]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 5)
 
   return (
@@ -63,7 +59,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Активных</p>
-                <p className="text-3xl font-bold text-foreground mt-1">{activeStudents}</p>
+                <p className="text-3xl font-bold text-foreground mt-1">{activeStudentsCount}</p>
               </div>
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10">
                 <UserCheck className="h-6 w-6 text-accent" />

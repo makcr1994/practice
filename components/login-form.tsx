@@ -24,8 +24,8 @@ export function LoginForm() {
     setIsLoading(true)
 
     try {
-      const success = await login(email, password)
-      if (success) {
+      const result = await login(email, password)
+      if (result.success) {
         toast({
           title: 'Успешный вход',
           description: 'Добро пожаловать в систему!',
@@ -34,7 +34,7 @@ export function LoginForm() {
       } else {
         toast({
           title: 'Ошибка входа',
-          description: 'Неверный логин или пароль',
+          description: result.error || 'Неверный логин или пароль',
           variant: 'destructive',
         })
       }
